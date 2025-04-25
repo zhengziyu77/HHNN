@@ -29,13 +29,10 @@ def convert_H_to_hyperedge_index(H):
     :param H: Hypergraph incidence matrix H as a PyTorch tensor.
     :return: hyperedge_index as a PyTorch tensor.
     """
-    # 确保H是PyTorch张量
     H = H.T
     
-    # 找到非零元素的索引，其中每一列的索引代表一条超边中的节点
     hyperedge,node_id = torch.nonzero(H, as_tuple=True)
     
-    # 将索引转换为超边索引格式，其中每个超边的索引放在同一行
     hyperedge_index = torch.stack((node_id,hyperedge), dim=1).t()
 
     return hyperedge_index
@@ -114,19 +111,15 @@ def load_moivelens():
 
     data = Data(x=feat, x_dict=X_dict, edge_index=hyperedge_index, y=labels, num_features=init_dims, num_classes=8, num_nodes=8663, num_hyperedges=168578)
 
-    # 初始化起始ID
     start_id = 0
     adj = [H,H_tag,H_rate]
     data.adj =adj
 
-    # 创建一个空字典来存储节点ID
     node_ids = {}
 
-    # 为每种类型的节点生成ID列表
     for node_type in num_list:
         node_ids[node_type] = list(range(start_id, start_id + num_list[node_type]))
-        start_id += num_list[node_type]  # 更新下一个节点类型的起始ID
-
+        start_id += num_list[node_type]  
     
     target_type = 'movie'
     hyper_list = ['umt', 'umr']
@@ -180,16 +173,12 @@ def load_customer():
 
     adj = [cps, cpr, spd]
     data.adj =adj
-    # 初始化起始ID
     start_id = 0
-
-    # 创建一个空字典来存储节点ID
     node_ids = {}
 
-    # 为每种类型的节点生成ID列表
     for node_type in num_list:
         node_ids[node_type] = list(range(start_id, start_id + num_list[node_type]))
-        start_id += num_list[node_type]  # 更新下一个节点类型的起始ID
+        start_id += num_list[node_type]  
     target_type ='product'
     target_type = 'p'
     hyper_list = ['cps', 'cpr', 'dpv']
