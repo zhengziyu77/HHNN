@@ -44,13 +44,11 @@ class HyperHINConv(nn.Module):
 
         self.W = nn.Linear(in_channels, heads * out_channels, bias=False)
 
-        #节点到超边的投影
         self.W_rel = nn.ParameterDict()
         for k in in_layer_shape:
             self.W_rel[k] = nn.Parameter(torch.FloatTensor(in_layer_shape[k], heads * out_channels))
             nn.init.xavier_uniform_(self.W_rel[k].data, gain=1.414)
 
-        #超边到节点的投影,投影回不同类型节点
         self.P_rel = nn.ParameterDict()
         for k in in_layer_shape:
             self.P_rel[k] = nn.Parameter(torch.FloatTensor(heads * out_channels , heads * out_layer_shape[k]))
@@ -66,7 +64,7 @@ class HyperHINConv(nn.Module):
         glorot(self.att_v)
         glorot(self.att_e)
 
-    def forward(self, X, X_dict, vertex, edges):#vertex:参与超边的节点id
+    def forward(self, X, X_dict, vertex, edges):#vertex id
        
         H, C, N = self.heads, self.out_channels, X.shape[0]
         E = len(edges)
@@ -75,17 +73,15 @@ class HyperHINConv(nn.Module):
 
         X0 = self.W(X) #k
         X1 = X0.view(N, H, C)
-        #节点到超边的投影
         n2e_list = []
         for n_type in X_dict:
             n2e = torch.mm(X_dict[n_type], self.W_rel[n_type])
-            n2e_list.append(n2e)#存储各个类型节点投影到超边空间后的特征
+            n2e_list.append(n2e)
         X_n2e = torch.cat(n2e_list,dim=0)
 
         X = X_n2e.view(N, H, C)
         use_node_attn = True
         X = X1
-        #节点级注意力 [V,H,C] * [1,H,C]
         if use_node_attn:
             alpha_v = (X * self.att_v).sum(-1) # [V, H, 1] #QK
             a_ve = alpha_v[vertex]
@@ -95,7 +91,6 @@ class HyperHINConv(nn.Module):
             #lamb = self.attn_drop( lamb )
             lamb = lamb.unsqueeze(-1)
             Xve = X[vertex] # [nnz, H, C]
-            #超边表示
   
             Xve = Xve * lamb #QKV
             Xe = scatter(Xve, edges, dim=0, reduce='sum', dim_size=E) # [E, H, C]
@@ -117,7 +112,6 @@ class HyperHINConv(nn.Module):
         Xv = scatter(Xev, vertex, dim=0, reduce='sum', dim_size=N) # [N, H, C]
         
 
-        #超边到节点的投影，投影回各个类型节点对应的节点空间
         #e2n_list = []
         #for n_type in X_dict:
         #    print(self.P_rel[n_type])
@@ -126,11 +120,10 @@ class HyperHINConv(nn.Module):
         #X_e2n = torch.cat(e2n_list,dim=0)
 
         X = Xv.view(N, H * C)
-        #超边到节点的投影，投影回各个类型节点对应的节点空间
         #e2n_list = []
         #for n_type in X_dict:
         #    e2n = torch.mm(X[self.node_ids[n_type]], self.P_rel[n_type])
-        #    e2n_list.append(e2n)#存储超边表示投影到各个类型节点空间后的特征
+        #    e2n_list.append(e2n)
         #X_e2n = torch.cat(e2n_list,dim=0)
         #X = X_e2n
 
@@ -177,7 +170,7 @@ class HyperHINLayer(nn.Module):
         self_x = torch.mm(X, self.w_self)
         for k in self.unigat_agg.keys():
             hyperedge = self.hyperedge_dict[k]
-            V,E = hyperedge[0], hyperedge[1]#当前类型超边
+            V,E = hyperedge[0], hyperedge[1]
             curr_x = self.unigat_agg[k](X, X_dict,V,E)
             x_list.append(curr_x)
         #hyperedge_type fusion
